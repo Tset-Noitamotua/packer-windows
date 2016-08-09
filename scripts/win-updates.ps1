@@ -1,9 +1,12 @@
 param($global:RestartRequired=0,
         $global:MoreUpdates=0,
-        $global:MaxCycles=5,
-        $MaxUpdatesPerCycle=500)
+        $global:MaxCycles=1,
+        [int]$MaxUpdatesPerCycle=1000,
+        [int]$Iteration=1)
 
 $Logfile = "C:\Windows\Temp\win-updates.log"
+$RegistryKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+$RegistryEntry = "InstallWindowsUpdates"
 
 function LogWrite {
    Param ([string]$logstring)
@@ -13,38 +16,22 @@ function LogWrite {
 }
 
 function Check-ContinueRestartOrEnd() {
-    $RegistryKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-    $RegistryEntry = "InstallWindowsUpdates"
+
     switch ($global:RestartRequired) {
         0 {
-            $prop = (Get-ItemProperty $RegistryKey).$RegistryEntry
-            if ($prop) {
-                LogWrite "Restart Registry Entry Exists - Removing It"
-                Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
-            }
-
             LogWrite "No Restart Required"
             Check-WindowsUpdates
-
             if (($global:MoreUpdates -eq 1) -and ($script:Cycles -le $global:MaxCycles)) {
                 Install-WindowsUpdates
+                return
             } elseif ($script:Cycles -gt $global:MaxCycles) {
                 LogWrite "Exceeded Cycle Count - Stopping"
-                Invoke-Expression "a:\openssh.ps1 -AutoStart"
             } else {
                 LogWrite "Done Installing Windows Updates"
-                Invoke-Expression "a:\openssh.ps1 -AutoStart"
             }
+            Invoke-Expression "a:\ansible.ps1"
         }
         1 {
-            $prop = (Get-ItemProperty $RegistryKey).$RegistryEntry
-            if (-not $prop) {
-                LogWrite "Restart Registry Entry Does Not Exist - Creating It"
-                Set-ItemProperty -Path $RegistryKey -Name $RegistryEntry -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File $($script:ScriptPath) -MaxUpdatesPerCycle $($MaxUpdatesPerCycle)"
-            } else {
-                LogWrite "Restart Registry Entry Exists Already"
-            }
-
             LogWrite "Restart Required - Restarting..."
             Restart-Computer
         }
@@ -114,7 +101,6 @@ function Install-WindowsUpdates() {
         if (($Update.IsDownloaded)) {
             LogWrite "> $($Update.Title)"
             $UpdatesToInstall.Add($Update) |Out-Null
-
             if ($Update.InstallationBehavior.RebootBehavior -gt 0){
                 [bool]$rebootMayBeRequired = $true
             }
@@ -125,7 +111,7 @@ function Install-WindowsUpdates() {
         LogWrite 'No updates available to install...'
         $global:MoreUpdates=0
         $global:RestartRequired=0
-        Invoke-Expression "a:\openssh.ps1 -AutoStart"
+        Invoke-Expression "a:\ansible.ps1"
         break
     }
 
@@ -162,12 +148,23 @@ function Install-WindowsUpdates() {
 }
 
 function Check-WindowsUpdates() {
+    if ($Iteration -ge 3) {
+        LogWrite "Skipping Windows Updates checks ..."
+        $global:RestartRequired=0
+        Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
+        Invoke-Expression "a:\ansible.ps1"
+        break
+    } else {
+        $Iteration++
+        Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $RegistryKey -Name $RegistryEntry -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File $($script:ScriptPath) -MaxUpdatesPerCycle $($MaxUpdatesPerCycle) -Iteration $($Iteration) -NoExit"
+    }
+
     LogWrite "Checking For Windows Updates"
     $Username = $env:USERDOMAIN + "\" + $env:USERNAME
 
     New-EventLog -Source $ScriptName -LogName 'Windows Powershell' -ErrorAction SilentlyContinue
-
-    $Message = "Script: " + $ScriptPath + "`nScript User: " + $Username + "`nStarted: " + (Get-Date).toString()
+    $Message = "Script: " + $ScriptPath + "`nScript User: " + $Username + "`nStarted: " + (Get-Date).toString() + "`nIteration: " + $Iteration
 
     Write-EventLog -LogName 'Windows Powershell' -Source $ScriptName -EventID "104" -EntryType "Information" -Message $Message
     LogWrite $Message
@@ -175,7 +172,7 @@ function Check-WindowsUpdates() {
     $script:UpdateSearcher = $script:UpdateSession.CreateUpdateSearcher()
     $script:successful = $FALSE
     $script:attempts = 0
-    $script:maxAttempts = 12
+    $script:maxAttempts = 5
     while(-not $script:successful -and $script:attempts -lt $script:maxAttempts) {
         try {
             $script:SearchResult = $script:UpdateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0")
@@ -230,4 +227,3 @@ if ($global:MoreUpdates -eq 1) {
 } else {
     Check-ContinueRestartOrEnd
 }
-
