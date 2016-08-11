@@ -16,7 +16,7 @@
       "floppy_files": [
         "{{user `autounattend`}}",
         "./scripts/qres.exe",
-        "./scripts/tweaks.bat",
+        "./scripts/vm-guest-tools.bat",
         "./scripts/disable-updates.ps1",
         "./scripts/hotfix-KB3102810.bat",
         "./scripts/microsoft-updates.bat",
@@ -49,8 +49,7 @@
       "scripts": [
         "./scripts/vm-guest-tools.bat",
         "./scripts/vagrant-ssh.bat",
-        "./scripts/disable-auto-logon.bat",
-        "./scripts/enable-rdp.bat",
+        "./scripts/configure-user-profile.bat",
         "./scripts/compile-dotnet-assemblies.bat"
       ]
     }

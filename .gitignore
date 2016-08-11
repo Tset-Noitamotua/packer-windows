@@ -11,3 +11,4 @@
 /packer_cache/
 /.vagrant
 *.ova
+*.retry

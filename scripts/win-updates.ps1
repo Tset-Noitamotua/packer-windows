@@ -6,7 +6,7 @@ param($global:RestartRequired=0,
 
 $Logfile = "C:\Windows\Temp\win-updates.log"
 $RegistryKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-$RegistryEntry = "InstallWindowsUpdates"
+$RegistryEntry = "AutounattendStartPoint"
 
 function LogWrite {
    Param ([string]$logstring)
@@ -151,12 +151,12 @@ function Check-WindowsUpdates() {
     if ($Iteration -ge 3) {
         LogWrite "Skipping Windows Updates checks ..."
         $global:RestartRequired=0
-        Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
+        # Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
         Invoke-Expression "a:\ansible.ps1"
         break
     } else {
         $Iteration++
-        Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
+        # Remove-ItemProperty -Path $RegistryKey -Name $RegistryEntry -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $RegistryKey -Name $RegistryEntry -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File $($script:ScriptPath) -MaxUpdatesPerCycle $($MaxUpdatesPerCycle) -Iteration $($Iteration) -NoExit"
     }
 
