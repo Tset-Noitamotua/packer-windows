@@ -1,0 +1,31 @@
+---
+- hosts: windows
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    # - name: Install Chocolatey packages
+    #   win_chocolatey: name={{ item.name }}
+    #   with_items:
+    #     - {name: googlechrome}
+    #     - {name: chromedriver2}
+    #     - {name: nodejs}
+
+    # - name: Copy files
+    #   win_copy: src={{ item.name }} dest={{ system32_dir }}
+    #   with_items:
+    #     - {name: 'qres.exe'}
+
+    # - name: Configure user profile
+    #   raw: Write-Host "OOOOOO"
+
+    # - name: Configure
+    #   script: ansible.ps1
+
+    - name: Configure user profile
+      script: profile-configure.ps1
+      #script: files/configure-user-profile.bat
+
+    # - name: Test
+    #   script: foo.ps1 --argument --other-argument

@@ -63,7 +63,7 @@ $DownloadUrl="https://raw.githubusercontent.com/cchurch/ansible/devel/examples/s
 $FileName = $DownLoadUrl.Split('/')[-1]
 Download-File $downloadurl "$powershellpath\$filename"
 Write-Host "$powershellpath\$filename"
-Start-Process powershell.exe -Wait -ArgumentList "$powershellpath\$filename"
+Start-Process powershell.exe -Wait -ArgumentList "$powershellpath\$filename", "-SkipNetworkProfileCheck"
 Write-Host "Ansible for Windows configured"
 
 
